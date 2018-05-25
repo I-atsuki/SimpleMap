@@ -10,6 +10,8 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,6 +27,8 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -46,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Manifest.permission.ACCESS_FINE_LOCATION
     };
     private final static int REQCODE_PERMISSIONS = 1234;
-
+    private boolean mflag = true;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,11 +68,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .addApi(LocationServices.API)
                 .build();
 
+        Button button = findViewById(R.id.button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "onResume");
+                    startLocationUpdate(true);
+                }
+        });
+
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         locationRequest = new LocationRequest();
-        locationRequest.setInterval(10000L);
-        locationRequest.setFastestInterval(5000L);
+        //locationRequest.setInterval(10000L);
+        //locationRequest.setFastestInterval(5000L);
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
         locationCallback = new LocationCallback() {
@@ -82,10 +95,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             latLng.latitude, latLng.longitude));
                     if (googleMap != null)
                         googleMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+
                 }
             }
         };
+
+
     }
+
 
     @Override
     protected void onStart() {
@@ -119,11 +136,38 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onStop();
     }
 
+    private Marker mk1;
+    private Marker mk2;
+
     @Override
     public void onMapReady(GoogleMap map) {
-        Log.d(TAG, "onMapReady");
-        map.moveCamera(CameraUpdateFactory.zoomTo(15f));
-        googleMap = map;
+            Log.d(TAG, "onMapReady");
+            map.moveCamera(CameraUpdateFactory.zoomTo(15f));
+            googleMap = map;
+        googleMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng longpushLocation) {
+                if(mk1 != null) {
+                    mk1.remove();
+                }
+                if(mk2 != null){
+                    mk1 = mk2;
+                }
+                LatLng newlocation = new LatLng(longpushLocation.latitude, longpushLocation.longitude);
+                mk2 = googleMap.addMarker(new MarkerOptions().position(newlocation).title(""+longpushLocation.latitude+" :"+ longpushLocation.longitude));
+                //googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newlocation, 14));
+                if(mk1 != null){
+                    LatLng po1 = mk1.getPosition();
+                    LatLng po2 = mk2.getPosition();
+                    float[] re = new float[1];
+                    Location.distanceBetween(po1.latitude,po1.longitude,po2.latitude,po2.longitude,re);
+                    infoView.setText("距離は"+(int)re[0]+"mです");
+                }
+            }
+
+        });
+
+
     }
 
     @Override
