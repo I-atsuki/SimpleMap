@@ -3,6 +3,7 @@ package jp.ac.titech.itpro.sdl.simplemap;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -29,6 +30,9 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -153,6 +157,54 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if(mk2 != null){
                     mk1 = mk2;
                 }
+                ////
+                // APIに飛ばすデータを作成
+                String name = ((TextView) findViewById(R.id.name)).getText().toString();
+                String contact = ((TextView) findViewById(R.id.contact)).getText().toString();
+                // AyncTaskLoader(匿名クラス)からアクセスするためにfinalを付与
+                final String sendData = String.format(
+                        "{ \"contact\": { \"name\":\"%s\", \"contact\":\"%s\" } }",
+                        name, contact);
+                // APIを飛ばす処理
+                new AsyncTask<Void, Void, Void>() {
+                    @Override
+                    public Void doInBackground(Void... params) {
+
+                    try {
+                        // データを送信するためにはbyte配列に変換する必要がある
+                        byte[] sendJson = sendData.getBytes("UTF-8");
+
+                        // 接続先のURLの設定およびコネクションの取得
+                        URL url = new URL("http://api.kumapon.jp/deals/239.json");
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+                        // 接続するための設定
+                        connection.setRequestMethod("POST");
+                        connection.setRequestProperty("Content-Type", "application/json");
+                        connection.setRequestProperty("Accept", "application/json");
+
+                        // APIからの戻り値と送信するデータの設定を許可する
+                        connection.setDoInput(true);
+                        connection.setDoOutput(true);
+
+                        // 送信するデータの設定
+                        connection.getOutputStream().write(sendJson);
+                        connection.getOutputStream().flush();
+                        connection.getOutputStream().close();
+
+                        // 接続！
+                        connection.connect();
+                        connection.getResponseCode();
+
+                        } catch (Exception e) {
+                        e.printStackTrace();
+                        }
+                        return null;
+                    }
+                }.execute(); // executeメソッドでdoInBackgroundメソッドを別スレッドで実行
+
+
+                ////
                 LatLng newlocation = new LatLng(longpushLocation.latitude, longpushLocation.longitude);
                 mk2 = googleMap.addMarker(new MarkerOptions().position(newlocation).title(""+longpushLocation.latitude+" :"+ longpushLocation.longitude));
                 //googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newlocation, 14));
